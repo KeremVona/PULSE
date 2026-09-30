@@ -49,8 +49,7 @@ public sealed class RiskAssessmentResultConfiguration : IEntityTypeConfiguration
             .IsRequired();
 
         builder.Property(r => r.RecommendedAction)
-            .HasColumnName("recommended_action")
-            .HasMaxLength(255);
+            .HasColumnName("recommended_action");
 
         builder.Property(r => r.AssessedAt)
             .HasColumnName("assessed_at")

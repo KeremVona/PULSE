@@ -1,21 +1,45 @@
 # ==============================================================================
 # PULSE Clinical Decision Support System (CDSS)
-# Docker Compose Microservices Architecture
+# Module: docker-compose.yml
+# Architecture: Multi-Container Integrated Topology (PostgreSQL, FastAPI, .NET 10, Nginx/React)
+# Network: Isolated Internal Bridge Network (pulse-net)
 # ==============================================================================
 
 services:
-  # Machine Learning & Real-Time Explainability Microservice
-  ml-service:
+  # ----------------------------------------------------------------------------
+  # 1. Relational Persistence Layer (PostgreSQL 17)
+  # ----------------------------------------------------------------------------
+  postgres:
+    image: postgres:17-alpine
+    container_name: pulse-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pulse_cdss
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pulse_secure_password_dev
+    volumes:
+      - pulse_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pulse_cdss"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - pulse-net
+
+  # ----------------------------------------------------------------------------
+  # 2. Machine Learning Inference Microservice (FastAPI + TreeSHAP)
+  # ----------------------------------------------------------------------------
+  ml:
     build:
       context: .
       dockerfile: ml/Dockerfile
-    container_name: pulse-ml-service
+    container_name: pulse-ml
     restart: unless-stopped
-    ports:
-      - "8000:8000"
     environment:
-      - PYTHONUNBUFFERED=1
-      - PORT=8000
+      PORT: 8000
+      PYTHONUNBUFFERED: "1"
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=2).getcode() == 200 else 1)"]
       interval: 10s
@@ -23,33 +47,77 @@ services:
       retries: 3
       start_period: 5s
     networks:
-      - pulse-network
+      - pulse-net
 
-  # PostgreSQL 16 Relational Database & Audit Store
-  postgres-db:
-    image: postgres:16-alpine
-    container_name: pulse-postgres-db
+  # ----------------------------------------------------------------------------
+  # 3. Enterprise Clinical Orchestration Layer (ASP.NET Core .NET 10 API)
+  # ----------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: pulse-backend
     restart: unless-stopped
-    ports:
-      - "5432:5432"
     environment:
-      POSTGRES_DB: pulse_cdss
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: pulse_secure_password_dev
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:5000
+      ConnectionStrings__DefaultConnection: Host=postgres;Port=5432;Database=pulse_cdss;Username=postgres;Password=pulse_secure_password_dev
+      MlInference__BaseUrl: http://ml:8000
+      MlInference__TimeoutMs: 5000
+      MlInference__RetryCount: 3
+      Jwt__Issuer: HeartCDSS.Api
+      Jwt__Audience: HeartCDSS.Client
+      Jwt__SecretKey: PULSE_Clinical_Super_Secret_Jwt_Key_2026_CDSS_Enterprise_Token_Key_Security!
+      Jwt__ExpiryMinutes: 60
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ml:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d pulse_cdss"]
-      interval: 5s
-      timeout: 3s
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
       retries: 5
+      start_period: 10s
     networks:
-      - pulse-network
+      - pulse-net
 
+  # ----------------------------------------------------------------------------
+  # 4. User-Facing Clinical Portal (React 19 + Tailwind CSS v4 + Nginx Proxy)
+  # ----------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: pulse-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:80"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:80/ || exit 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - pulse-net
+
+# ------------------------------------------------------------------------------
+# Isolated Bridge Network
+# ------------------------------------------------------------------------------
 networks:
-  pulse-network:
+  pulse-net:
     driver: bridge
 
+# ------------------------------------------------------------------------------
+# Persistent Volume Storage
+# ------------------------------------------------------------------------------
 volumes:
-  postgres_data:
+  pulse_pgdata:
     driver: local

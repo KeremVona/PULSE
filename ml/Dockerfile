@@ -40,6 +40,11 @@ RUN find /opt/venv -type d -name "tests" -exec rm -rf {} + 2>/dev/null || true &
 # ------------------------------------------------------------------------------
 FROM python:3.12-slim-bookworm AS runtime
 
+# Install libgomp1 for OpenMP acceleration in LightGBM runtime
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
 # Security Hardening: Enforce unprivileged user execution (Least Privilege Principle)
 # Make a dedicated system group and user with no shell login
 RUN groupadd -g 10001 pulsegroup && \

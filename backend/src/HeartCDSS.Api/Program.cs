@@ -39,6 +39,16 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("PulseCorsPolicy", policy =>
+    {
+        policy.AllowAnyOrigin()
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 builder.Services.AddAuthorization();
 
 // Add Controllers & OpenAPI
@@ -67,7 +77,100 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+// Apply pending database migrations on startup when running with relational database
+using (var madeScope = app.Services.CreateScope())
+{
+    var madeServices = madeScope.ServiceProvider;
+    var madeConfig = madeServices.GetRequiredService<IConfiguration>();
+    if (!madeConfig.GetValue<bool>("UseInMemoryDatabase"))
+    {
+        var madeLogger = madeServices.GetRequiredService<ILogger<Program>>();
+        var madeDbContext = madeServices.GetRequiredService<HeartCDSS.Infrastructure.Persistence.HeartCDSSDbContext>();
+        var maxRetries = 10;
+        var retryDelay = TimeSpan.FromSeconds(2);
+
+        for (var attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                madeLogger.LogInformation("Applying relational database migrations (attempt {Attempt}/{MaxRetries})...", attempt, maxRetries);
+                Microsoft.EntityFrameworkCore.RelationalDatabaseFacadeExtensions.Migrate(madeDbContext.Database);
+                madeLogger.LogInformation("Database migration applied successfully.");
+
+                if (!madeDbContext.Patients.Any())
+                {
+                    var seedPatient = HeartCDSS.Domain.Entities.Patient.Make(
+                        mrn: "MRN-PULSE-001",
+                        firstName: "Jane",
+                        lastName: "Doe",
+                        dateOfBirth: new DateOnly(1970, 5, 15),
+                        biologicalSex: HeartCDSS.Domain.Enums.BiologicalSex.Female,
+                        id: Guid.Parse("11111111-1111-1111-1111-111111111111")
+                    );
+                    madeDbContext.Patients.Add(seedPatient);
+                    madeDbContext.SaveChanges();
+                    madeLogger.LogInformation("Seeded default patient record {Mrn} ({PatientId}).", seedPatient.Mrn, seedPatient.Id);
+                }
+
+                if (!madeDbContext.MlModels.Any())
+                {
+                    var seedModel = HeartCDSS.Domain.Entities.MlModel.Make(
+                        modelName: "PULSE-XGBoost-Calibrated",
+                        modelVersion: "1.0.0",
+                        modelFamily: "GradientBoosting",
+                        calibrationMethod: "Isotonic",
+                        decisionThreshold: 0.500m,
+                        targetSensitivity: 0.900m,
+                        rocAuc: 0.892m,
+                        prAuc: 0.865m,
+                        brierScore: 0.082m,
+                        id: Guid.Parse("00000000-0000-0000-0000-000000000001")
+                    );
+                    madeDbContext.MlModels.Add(seedModel);
+                    madeDbContext.SaveChanges();
+                    madeLogger.LogInformation("Seeded default ML model record {ModelName} ({ModelId}).", seedModel.ModelName, seedModel.Id);
+                }
+
+                if (!madeDbContext.Roles.Any())
+                {
+                    madeDbContext.Roles.AddRange(
+                        new HeartCDSS.Domain.Entities.Role(Guid.Parse("11111111-1111-1111-1111-111111111111"), HeartCDSS.Domain.Entities.Role.Physician, "Cardiologists and attending physicians with clinical order and assessment authority"),
+                        new HeartCDSS.Domain.Entities.Role(Guid.Parse("22222222-2222-2222-2222-222222222222"), HeartCDSS.Domain.Entities.Role.ClinicalStaff, "Nurses and medical assistants authorized to intake vitals and view patient rosters"),
+                        new HeartCDSS.Domain.Entities.Role(Guid.Parse("33333333-3333-3333-3333-333333333333"), HeartCDSS.Domain.Entities.Role.Admin, "System administrators managing user accounts and model registries"),
+                        new HeartCDSS.Domain.Entities.Role(Guid.Parse("44444444-4444-4444-4444-444444444444"), HeartCDSS.Domain.Entities.Role.Auditor, "Compliance auditors with read-only access to prediction logs and audit trails")
+                    );
+                    madeDbContext.SaveChanges();
+                    madeLogger.LogInformation("Seeded default role records.");
+                }
+
+                break;
+            }
+            catch (Exception ex) when (attempt < maxRetries)
+            {
+                madeLogger.LogWarning(ex, "Database migration attempt {Attempt} failed. Retrying in {Delay}s...", attempt, retryDelay.TotalSeconds);
+                Thread.Sleep(retryDelay);
+            }
+            catch (Exception ex)
+            {
+                madeLogger.LogError(ex, "Database migration failed after {MaxRetries} attempts.", maxRetries);
+                throw;
+            }
+        }
+    }
+}
+
+if (builder.Configuration.GetValue<bool>("EnableHttpsRedirection", false))
+{
+    app.UseHttpsRedirection();
+}
+
+app.MapGet("/health", () => Results.Ok(new
+{
+    Status = "Healthy",
+    Service = "PULSE ASP.NET Core Enterprise Orchestration Layer",
+    Timestamp = DateTimeOffset.UtcNow
+}))
+.WithName("HealthCheckRoot");
 
 app.MapGet("/api/health", () => Results.Ok(new
 {
@@ -77,7 +180,8 @@ app.MapGet("/api/health", () => Results.Ok(new
 }))
 .WithName("HealthCheck");
 
-// Enable Authentication and Authorization
+// Enable CORS, Authentication and Authorization
+app.UseCors("PulseCorsPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 

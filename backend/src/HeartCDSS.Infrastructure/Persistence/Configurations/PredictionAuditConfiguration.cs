@@ -65,8 +65,7 @@ public sealed class PredictionAuditConfiguration : IEntityTypeConfiguration<Pred
             .HasColumnName("client_ip");
 
         builder.Property(p => p.UserAgent)
-            .HasColumnName("user_agent")
-            .HasMaxLength(255);
+            .HasColumnName("user_agent");
 
         builder.Property(p => p.MadeAt)
             .HasColumnName("made_at")

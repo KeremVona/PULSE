@@ -42,6 +42,7 @@ public static class DependencyInjection
                         errorCodesToAdd: null
                     );
                 });
+                options.ConfigureWarnings(w => w.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
             });
         }
 
