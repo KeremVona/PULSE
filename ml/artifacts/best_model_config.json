@@ -1,0 +1,36 @@
+{
+  "model_name": "LightGBM",
+  "model_family": "LightGBM",
+  "hyperparameters": {
+    "n_estimators": 175,
+    "max_depth": 5,
+    "num_leaves": 19,
+    "learning_rate": 0.020753047137737676,
+    "min_child_samples": 28,
+    "subsample": 0.7867818783837214,
+    "colsample_bytree": 0.9302335985914867,
+    "reg_alpha": 0.014334664501208917,
+    "reg_lambda": 4.789212889932435,
+    "class_weight": "balanced"
+  },
+  "optimal_decision_threshold": 0.24,
+  "benchmark_metrics": {
+    "sensitivity": 0.9712230215827338,
+    "specificity": 0.5515151515151515,
+    "precision": 0.645933014354067,
+    "f1_score": 0.7758620689655172,
+    "f2_score": 0.8823529411764706,
+    "roc_auc": 0.9103335513407456,
+    "pr_auc": 0.9066576339658091,
+    "brier_score": 0.12338066959143483,
+    "cost_sensitive_loss": 0.29605263157894735,
+    "threshold": 0.24,
+    "tp": 135,
+    "fp": 74,
+    "tn": 91,
+    "fn": 4
+  },
+  "min_sensitivity_guarantee": 0.92,
+  "dataset": "Cleveland (14 attributes)",
+  "cv_method": "Stratified 5-Fold Cross-Validation"
+}

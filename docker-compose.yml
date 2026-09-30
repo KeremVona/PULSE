@@ -1,0 +1,55 @@
+# ==============================================================================
+# PULSE Clinical Decision Support System (CDSS)
+# Docker Compose Microservices Architecture
+# ==============================================================================
+
+services:
+  # Machine Learning & Real-Time Explainability Microservice
+  ml-service:
+    build:
+      context: .
+      dockerfile: ml/Dockerfile
+    container_name: pulse-ml-service
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - PORT=8000
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request, sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/health', timeout=2).getcode() == 200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+    networks:
+      - pulse-network
+
+  # PostgreSQL 16 Relational Database & Audit Store
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: pulse-postgres-db
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: pulse_cdss
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: pulse_secure_password_dev
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d pulse_cdss"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - pulse-network
+
+networks:
+  pulse-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local

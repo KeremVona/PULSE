@@ -1,0 +1,17 @@
+# PULSE Clinical Decision Support System (CDSS)
+# Production Machine Learning & API Dependencies
+# Multi-stage lightweight container deployment
+
+fastapi>=0.115.0,<1.0.0
+uvicorn[standard]>=0.30.0,<1.0.0
+pydantic>=2.8.0,<3.0.0
+numpy>=1.26.0,<3.0.0
+scipy>=1.13.0,<2.0.0
+pandas>=2.2.0,<4.0.0
+scikit-learn>=1.5.0,<2.0.0
+lightgbm>=4.5.0,<5.0.0
+shap>=0.45.0,<1.0.0
+joblib>=1.4.0,<2.0.0
+psutil>=5.9.0,<8.0.0
+httpx>=0.27.0,<1.0.0
+python-dotenv>=1.0.0,<2.0.0

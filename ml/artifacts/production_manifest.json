@@ -1,0 +1,49 @@
+{
+  "pipeline_name": "PULSE-CDSS-ML-Pipeline",
+  "phase": "Phase 1 - ML Engineering & Preprocessing",
+  "version": "1.0.0",
+  "timestamp": "2026-09-30",
+  "artifacts": {
+    "model": "ml/artifacts/model.joblib",
+    "preprocessor": "ml/artifacts/preprocessor.joblib",
+    "calibrator": "ml/artifacts/calibrator.joblib",
+    "background_sample": "ml/artifacts/background_sample.npy",
+    "config": "ml/artifacts/calibrated_model_config.json"
+  },
+  "benchmarks": {
+    "cold_start_load_time_ms": 35.09,
+    "median_shap_latency_ms": 1.56,
+    "max_additivity_error": 3e-08,
+    "decision_threshold": 0.29,
+    "brier_score": 0.09099683501314416,
+    "test_sensitivity": 0.9642857142857143,
+    "test_specificity": 0.696969696969697,
+    "test_precision": 0.7297297297297297,
+    "test_f2_score": 0.9060402684563759
+  },
+  "feature_count": 22,
+  "feature_names": [
+    "age",
+    "trestbps",
+    "chol",
+    "thalach",
+    "oldpeak",
+    "cp_1",
+    "cp_2",
+    "cp_3",
+    "cp_4",
+    "restecg_0",
+    "restecg_1",
+    "restecg_2",
+    "slope_1",
+    "slope_2",
+    "slope_3",
+    "thal_3",
+    "thal_6",
+    "thal_7",
+    "sex",
+    "fbs",
+    "exang",
+    "ca"
+  ]
+}

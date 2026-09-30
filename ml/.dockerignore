@@ -1,0 +1,35 @@
+# Git and CI/CD
+.git
+.github
+.gitignore
+
+# Virtual Environments
+.venv
+venv
+ENV/
+env/
+
+# Python Cache and Compiled Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Test & Coverage Artifacts
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+tests/
+
+# Jupyter Notebooks & Data
+notebooks/
+data/raw/
+*.ipynb
+
+# Local Logs & IDE Files
+*.log
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
