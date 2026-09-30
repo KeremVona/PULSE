@@ -51,8 +51,10 @@ describe('RiskAssessmentView Component', () => {
     expect(screen.getByTestId('risk-probability-value')).toHaveTextContent('74.2%');
 
     // Clinical Guidance & Action
-    expect(screen.getByText('Recommended Clinical Action')).toBeInTheDocument();
-    expect(screen.getByText(madeAssessment.recommendedAction)).toBeInTheDocument();
+    expect(
+      screen.getByText('Diagnostic Recommendations & Clinical Action Plan')
+    ).toBeInTheDocument();
+    expect(screen.getByText('Recommend Stress Echocardiogram / SPECT')).toBeInTheDocument();
 
     // Clinical Safety Alerts
     expect(screen.getByText('Active Clinical Safety Alerts')).toBeInTheDocument();
@@ -68,5 +70,11 @@ describe('RiskAssessmentView Component', () => {
     const shapButton = screen.getByRole('button', { name: /View SHAP Attributions/i });
     fireEvent.click(shapButton);
     expect(mockNavigateToExplainability).toHaveBeenCalledTimes(1);
+
+    // Open Export Report modal
+    const exportButton = screen.getAllByRole('button', { name: /Export Clinical Note/i })[0];
+    fireEvent.click(exportButton);
+    expect(screen.getByTestId('encounter-report-view')).toBeInTheDocument();
+    expect(screen.getByText(/Printable Medical Record Summary Note/i)).toBeInTheDocument();
   });
 });

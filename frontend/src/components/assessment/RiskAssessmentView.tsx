@@ -1,18 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useAppDispatch, useAppSelector } from '@/store/hooks';
 import { RiskAssessmentGauge } from '@/components/assessment/RiskAssessmentGauge';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/common/Card';
+import { DiagnosticRecommendationsPanel } from '@/components/assessment/DiagnosticRecommendationsPanel';
+import { EncounterReportView } from '@/components/assessment/EncounterReportView';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/common/Card';
 import { Button } from '@/components/common/Button';
 import { Badge } from '@/components/common/Badge';
 import {
   Sparkles,
-  AlertTriangle,
   FileText,
   Activity,
   ArrowRight,
   TrendingUp,
   ShieldCheck,
-  Stethoscope
+  FileDown,
+  AlertTriangle
 } from 'lucide-react';
 import { makeSampleRiskAssessment } from '@/utils/riskFixtures';
 import { setActiveAssessment } from '@/store/slices/riskAssessmentSlice';
@@ -29,6 +31,8 @@ export const RiskAssessmentView: React.FC<RiskAssessmentViewProps> = ({
   const dispatch = useAppDispatch();
   const riskState = useAppSelector((state) => state.riskAssessment);
   const encounterState = useAppSelector((state) => state.encounter);
+
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const madeAssessment = riskState.activeAssessment;
 
@@ -69,7 +73,7 @@ export const RiskAssessmentView: React.FC<RiskAssessmentViewProps> = ({
               key={tier}
               type="button"
               onClick={() => makeLoadDemoAssessment(tier)}
-              className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition-colors"
+              className="px-2.5 py-1 rounded-md bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium transition-colors cursor-pointer"
             >
               {tier} Risk
             </button>
@@ -97,7 +101,7 @@ export const RiskAssessmentView: React.FC<RiskAssessmentViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
             size="sm"
@@ -105,6 +109,15 @@ export const RiskAssessmentView: React.FC<RiskAssessmentViewProps> = ({
             onClick={onNavigateToIntake}
           >
             Modify Indicators
+          </Button>
+
+          <Button
+            size="sm"
+            variant="secondary"
+            leftIcon={<FileDown className="w-4 h-4 text-sky-600" />}
+            onClick={() => setIsExportModalOpen(true)}
+          >
+            Export Clinical Note
           </Button>
 
           <Button
@@ -117,56 +130,15 @@ export const RiskAssessmentView: React.FC<RiskAssessmentViewProps> = ({
         </div>
       </div>
 
-      {/* Main Grid: Gauge Left (1 col) + Clinical Guidance Right (2 cols) */}
+      {/* Main Grid: Gauge Left (1 col) + Summary Drivers Right (2 cols) */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Left Column: Calibrated Risk Gauge */}
         <div className="lg:col-span-1">
           <RiskAssessmentGauge assessment={madeAssessment} />
         </div>
 
-        {/* Right Column: Guidance, Safety Warnings & Top Drivers */}
+        {/* Right Column: Top Drivers & Quick Summary */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Clinical Action Card */}
-          <Card className="border-sky-200 bg-sky-50/40">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <Sparkles className="w-5 h-5 text-sky-700" />
-                <CardTitle className="text-sky-950 text-base">
-                  Recommended Clinical Action
-                </CardTitle>
-              </div>
-              <CardDescription className="text-sky-800 text-xs">
-                Contextual CDSS guidance aligned with AHA/ACC guidelines
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm font-medium text-sky-900 leading-relaxed">
-                {madeAssessment.recommendedAction}
-              </p>
-            </CardContent>
-          </Card>
-
-          {/* Clinical Safety Alerts Banner (if present) */}
-          {madeAssessment.clinicalWarnings.length > 0 && (
-            <Card className="border-amber-300 bg-amber-50/50">
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-amber-700" />
-                  <CardTitle className="text-amber-950 text-base">
-                    Active Clinical Safety Alerts
-                  </CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ul className="list-disc list-inside text-xs text-amber-900 space-y-1.5 font-medium">
-                  {madeAssessment.clinicalWarnings.map((warning, index) => (
-                    <li key={index}>{warning}</li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Quick Summary of Top Drivers */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Top Risk Drivers */}
@@ -234,18 +206,39 @@ export const RiskAssessmentView: React.FC<RiskAssessmentViewProps> = ({
             </Card>
           </div>
 
-          {/* Regulatory Disclaimer Card */}
-          <div className="p-3.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-500 flex items-start gap-2.5">
-            <Stethoscope className="w-4 h-4 text-slate-400 mt-0.5 shrink-0" />
-            <div>
-              <span className="font-semibold text-slate-700 block mb-0.5">
-                Physician Advisory:
-              </span>
-              <p>{madeAssessment.clinicalDisclaimer}</p>
-            </div>
-          </div>
+          {/* Clinical Safety Alerts Banner (if present) */}
+          {madeAssessment.clinicalWarnings.length > 0 && (
+            <Card className="border-amber-300 bg-amber-50/50">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-amber-700" />
+                  <CardTitle className="text-amber-950 text-base">
+                    Active Clinical Safety Alerts
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ul className="list-disc list-inside text-xs text-amber-900 space-y-1.5 font-medium">
+                  {madeAssessment.clinicalWarnings.map((warning, index) => (
+                    <li key={index}>{warning}</li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Context-Driven Diagnostic Recommendations Panel with Anchored Advisory Banner */}
+          <DiagnosticRecommendationsPanel
+            assessment={madeAssessment}
+            onOpenReportExport={() => setIsExportModalOpen(true)}
+          />
         </div>
       </div>
+
+      {/* Printable Clinical Encounter Summary Modal Overlay */}
+      {isExportModalOpen && (
+        <EncounterReportView onClose={() => setIsExportModalOpen(false)} />
+      )}
     </div>
   );
 };
