@@ -60,6 +60,20 @@ describe('App Portal Integration', () => {
       );
     });
 
+    // Switch to Assessment tab
+    const madeAssessmentNav = screen.getByRole('button', { name: /risk stratification/i });
+    await act(async () => {
+      fireEvent.click(madeAssessmentNav);
+    });
+    expect(screen.getByText('No Active Risk Assessment Recorded')).toBeInTheDocument();
+
+    // Switch to SHAP Explainability tab
+    const madeShapNav = screen.getByRole('button', { name: /shap explainability/i });
+    await act(async () => {
+      fireEvent.click(madeShapNav);
+    });
+    expect(screen.getByText('No Explainability Payload Available')).toBeInTheDocument();
+
     // Switch to Audit tab
     const madeAuditNav = screen.getByRole('button', { name: /audit & governance/i });
     await act(async () => {
